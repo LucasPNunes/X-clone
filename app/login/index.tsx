@@ -1,12 +1,14 @@
 import { Image, StyleSheet, Platform, TextInput, View, Text, TouchableOpacity } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useContext, useState } from 'react';
+import { AuthContext } from '../authContext';
 
 type FormData ={
   email: string;
   password: string;
 }
 export default function Login() {
+  const { signIn } = useContext(AuthContext);
   const router = useRouter();
   const [data, setData] = useState<FormData>({
     email: "",
@@ -25,6 +27,12 @@ export default function Login() {
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
+    try{
+      await signIn(data, event);
+    }catch(error){
+      alert(error);
+      return;
+    }
     console.log(data)
   }
   

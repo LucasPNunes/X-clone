@@ -5,9 +5,12 @@ import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useEffect } from 'react';
+import axios from 'axios';
 
 export default function HomeScreen() {
   const router = useRouter();
+
   return (
    <div style={{backgroundColor:"black", height:"100%", width:"100%"}}>
         <p style={{fontSize:"50px", color:"white", marginLeft:"30px"}}>X</p>
@@ -16,7 +19,7 @@ export default function HomeScreen() {
           style={{display: "flex", justifyContent:"center", alignItems:"center", height:"45px", width:"250px", borderRadius:"24px", border:"0px", backgroundColor:"white"}}> 
               Login
           </button>
-          <button onClick={() => {router.replace('/login');}} 
+          <button onClick={() => {router.replace('/register');}} 
           style={{display: "flex", justifyContent:"center", alignItems:"center", height:"45px", width:"250px", borderRadius:"24px", backgroundColor:"lightblue", border:"0px"}}> 
               Criar conta
           </button>

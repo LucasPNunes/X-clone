@@ -1,70 +1,163 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import axios from 'axios';
+import React, { useContext, useEffect, useState } from 'react';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthContext } from '../authContext';
+import { useRouter } from 'expo-router';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+type Post = {
+  id: number;
+  title: string;
+  content: string;
+  isOfensive: boolean;
+  published: boolean;
+  author: { name: string };
+};
 
-export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+const Profile = () => {
+  const { user } = useContext(AuthContext);
+  const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsMounted(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+
+    const checkToken = async () => {
+      const token = await AsyncStorage.getItem('myToken');
+      if (!token) {
+        router.replace("/login");
+        return;
+      }
+    };
+
+    checkToken();
+
+    const fetchPosts = async () => {
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+
+      try {
+        const token = await AsyncStorage.getItem('myToken');
+        const BASE_URL = process.env.API_URL || 'http://localhost:3000';
+
+        const response = await axios.get(`${BASE_URL}/users/${user.id}`, {
+          headers: { authorization: `Bearer ${token}` },
+        });
+
+        setPosts(response.data.posts);
+      } catch (err) {
+        console.error("Erro ao buscar posts:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, [user, isMounted, router]);
+
+  const renderPost = ({ item }: { item: Post }) => (
+    <View style={[styles.postContainer, item.isOfensive ? styles.offensivePost : null]}>
+      <Text style={styles.postTitle}>{item.title}</Text>
+      <Text style={styles.postContent}>{item.content}</Text>
+      <Text style={styles.postAuthor}>Autor: {item.author.name}</Text>
+      {!item.published && <Text style={styles.unpublishedLabel}>Não Publicado</Text>}
+    </View>
   );
-}
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.heading}>Carregando...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.heading}>{user?.name}</Text>
+      <FlatList
+        data={posts}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderPost}
+        contentContainerStyle={styles.feedContainer}
+      />
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => console.log("Novo Post funcionalidade pendente!")}
+      >
+        <Text style={styles.buttonText}>Novo Post</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: 'black',
+    padding: 20,
+  },
+  heading: {
+    height: 50,
+    color: 'white',
+    fontSize: 40,
+    marginBottom: 10,
+    textAlign: 'left',
+  },
+  feedContainer: {
+    paddingBottom: 20,
+  },
+  postContainer: {
+    backgroundColor: '#222',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  offensivePost: {
+    backgroundColor: '#550000',
+  },
+  postTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'lightblue',
+  },
+  postContent: {
+    fontSize: 16,
+    color: 'white',
+    marginVertical: 5,
+  },
+  postAuthor: {
+    fontSize: 14,
+    color: 'grey',
+  },
+  unpublishedLabel: {
+    marginTop: 5,
+    color: 'orange',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  button: {
+    height: 45,
+    width: '100%',
+    borderRadius: 24,
+    backgroundColor: 'lightblue',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    marginVertical: 10,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  buttonText: {
+    color: 'black',
+    fontWeight: 'bold',
   },
 });
+
+export default Profile;
